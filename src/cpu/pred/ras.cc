@@ -1,6 +1,17 @@
 /*
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
+ *
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
+ *
  * Copyright (c) 2004-2005 The Regents of The University of Michigan
- * Copyright (c) 2022 The University of Edinburgh
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -262,7 +273,7 @@ ReturnAddrStack::squash(ThreadID tid, void * &ras_history)
     }
     DPRINTF(RAS, "[%s]\n", addrStacks[tid].print(10));
     // DPRINTF(RAS, "RAS: Delete hist:%#x\n", history);
-    delete history;
+    delete history; ras_history = nullptr;
 }
 
 void
@@ -315,7 +326,7 @@ ReturnAddrStack::commit(ThreadID tid, bool taken, Addr corrTarget,
                 __func__, !history->mispredict,
                 history->ras_entry->instAddr(), tid);
     }
-    delete history;
+    delete history; ras_history = nullptr;
 }
 
 

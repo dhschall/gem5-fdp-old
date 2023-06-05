@@ -1,7 +1,16 @@
 /*
  * Copyright (c) 2014 ARM Limited
- * Copyright (c) 2023 The University of Edinburgh
- * All rights reserved.
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
+ *
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -56,7 +65,7 @@ class SimpleIndirectPredictor : public IndirectPredictor
                                 Addr pc, void * &iHistory) override;
     void update(ThreadID tid, InstSeqNum sn, Addr pc, bool squash,
                 bool taken, const PCStateBase& target,
-                BranchClass brType, void * &iHistory) override;
+                BranchType brType, void * &iHistory) override;
     void squash(ThreadID tid, InstSeqNum sn, void * &iHistory) override;
     void commit(ThreadID tid, InstSeqNum sn, void * &iHistory) override;
 
@@ -170,9 +179,9 @@ class SimpleIndirectPredictor : public IndirectPredictor
     inline Addr getSetIndex(Addr br_addr, ThreadID tid);
     inline Addr getTag(Addr br_addr);
 
-    inline bool isIndirectNoReturn(BranchClass type) {
-        return (type == BranchClass::CallIndirect) ||
-               (type == BranchClass::IndirectUncond);
+    inline bool isIndirectNoReturn(BranchType type) {
+        return (type == BranchType::CallIndirect) ||
+               (type == BranchType::IndirectUncond);
     }
 
   protected:

@@ -1,4 +1,16 @@
 /*
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
+ *
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
+ *
  * Copyright (c) 2004-2005 The Regents of The University of Michigan
  * All rights reserved.
  *
@@ -71,26 +83,26 @@ BranchTargetBuffer::BranchTargetBufferStats::BranchTargetBufferStats(
     using namespace statistics;
     missRatio.precision(6);
     lookupType
-        .init(enums::Num_BranchClass)
+        .init(enums::Num_BranchType)
         .flags(total | pdf);
 
     missType
-        .init(enums::Num_BranchClass)
+        .init(enums::Num_BranchType)
         .flags(total | pdf);
 
     updates
-        .init(enums::Num_BranchClass)
+        .init(enums::Num_BranchType)
         .flags(total | pdf);
 
     mispredict
-        .init(enums::Num_BranchClass)
+        .init(enums::Num_BranchType)
         .flags(total | pdf);
 
-    for (int i = 0; i < enums::Num_BranchClass; i++) {
-        lookupType.subname(i, enums::BranchClassStrings[i]);
-        missType.subname(i, enums::BranchClassStrings[i]);
-        updates.subname(i, enums::BranchClassStrings[i]);
-        mispredict.subname(i, enums::BranchClassStrings[i]);
+    for (int i = 0; i < enums::Num_BranchType; i++) {
+        lookupType.subname(i, enums::BranchTypeStrings[i]);
+        missType.subname(i, enums::BranchTypeStrings[i]);
+        updates.subname(i, enums::BranchTypeStrings[i]);
+        mispredict.subname(i, enums::BranchTypeStrings[i]);
     }
 }
 

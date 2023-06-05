@@ -1,5 +1,16 @@
 /*
- * Copyright (c) 2022 The University of Edinburgh
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
+ *
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
+ *
  * Copyright (c) 2004-2005 The Regents of The University of Michigan
  * All rights reserved.
  *
@@ -48,11 +59,11 @@ class SimpleBTB : public BranchTargetBuffer
 
     void memInvalidate() override;
     const PCStateBase *lookup(ThreadID tid, Addr instPC,
-                           BranchClass type = BranchClass::NoBranch) override;
+                           BranchType type = BranchType::NoBranch) override;
     bool valid(ThreadID tid, Addr instPC,
-                           BranchClass type = BranchClass::NoBranch) override;
+                           BranchType type = BranchType::NoBranch) override;
     void update(ThreadID tid, Addr instPC, const PCStateBase &target_pc,
-                           BranchClass type = BranchClass::NoBranch,
+                           BranchType type = BranchType::NoBranch,
                            StaticInstPtr inst = nullptr) override;
 
 

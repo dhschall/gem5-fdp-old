@@ -1,17 +1,15 @@
 /*
- * Copyright (c) 2023 University of Edinburgh
- * All rights reserved.
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met: redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer;
- * redistributions in binary form must reproduce the above copyright
- * notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution;
- * neither the name of the copyright holders nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -34,7 +32,7 @@
 #define __CPU_PRED_BRANCH_TYPE_HH__
 
 #include "cpu/static_inst.hh"
-#include "enums/BranchClass.hh"
+#include "enums/BranchType.hh"
 
 namespace gem5
 {
@@ -42,38 +40,39 @@ namespace gem5
 namespace branch_prediction
 {
 
-typedef enums::BranchClass BranchClass;
+typedef enums::BranchType BranchType;
 
-inline BranchClass getBranchClass(StaticInstPtr inst)
+inline BranchType getBranchType(StaticInstPtr inst)
 {
     if (inst->isReturn()) {
-        return BranchClass::Return;
+        return BranchType::Return;
     }
 
     if (inst->isCall()) {
         return inst->isDirectCtrl()
-                    ? BranchClass::CallDirect
-                    : BranchClass::CallIndirect;
+                    ? BranchType::CallDirect
+                    : BranchType::CallIndirect;
     }
 
     if (inst->isDirectCtrl()) {
         return inst->isCondCtrl()
-                    ? BranchClass::DirectCond
-                    : BranchClass::DirectUncond;
+                    ? BranchType::DirectCond
+                    : BranchType::DirectUncond;
     }
 
     if (inst->isIndirectCtrl()) {
         return inst->isCondCtrl()
-                    ? BranchClass::IndirectCond
-                    : BranchClass::IndirectUncond;
+                    ? BranchType::IndirectCond
+                    : BranchType::IndirectUncond;
     }
-    return BranchClass::NoBranch;
+    return BranchType::NoBranch;
 }
 
-inline std::string toString(BranchClass type)
+inline std::string toString(BranchType type)
 {
-    return std::string(enums::BranchClassStrings[type]);
+    return std::string(enums::BranchTypeStrings[type]);
 }
+
 
 } // namespace branch_prediction
 } // namespace gem5

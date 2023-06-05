@@ -1,3 +1,15 @@
+# Copyright (c) 2022-2023 The University of Edinburgh
+# All rights reserved.
+#
+# The license below extends only to copyright in the software and shall
+# not be construed as granting a license to any other intellectual
+# property including but not limited to intellectual property relating
+# to a hardware implementation of the functionality of the software
+# licensed hereunder.  You may use the software subject to the license
+# terms below provided that you ensure that this notice is replicated
+# unmodified and in its entirety in all distributions of the software,
+# modified or unmodified, in source code or in binary form.
+#
 # Copyright (c) 2012 Mark D. Hill and David A. Wood
 # Copyright (c) 2015 The University of Wisconsin
 # All rights reserved.
@@ -33,7 +45,7 @@ from m5.objects.ClockedObject import ClockedObject
 from m5.objects.IndexingPolicies import *
 from m5.objects.ReplacementPolicies import *
 
-class BranchClass(Enum):
+class BranchType(Enum):
     vals = [
             'NoBranch', 'Return',
             'CallDirect', 'CallIndirect', # 'Call',
@@ -41,6 +53,10 @@ class BranchClass(Enum):
             'IndirectCond', 'IndirectUncond', #'Indirect',
             ]
 
+class TargetProvider(Enum):
+    vals = [
+            'NoTarget', 'BTB', 'RAS', 'Indirect',
+            ]
 
 class ReturnAddrStack(SimObject):
     type = 'ReturnAddrStack'
@@ -131,8 +147,10 @@ class BranchPredictor(SimObject):
 
     numThreads = Param.Unsigned(Parent.numThreads, "Number of threads")
     instShiftAmt = Param.Unsigned(2,"Number of bits to shift instructions by")
-    fallbackBTB = Param.Bool(False, "In case the BTB is corrupt use the BTB "
-                                "prediction")
+    requiresBTBHit = Param.Bool(False, "Requires a BTB hit to detect if "
+                            " a branch was a return or indirect branch.")
+
+
     BTBEntries = Param.Unsigned(4096, "Number of BTB entries")
     BTBTagSize = Param.Unsigned(16, "Size of the BTB tags, in bits")
     RASSize = Param.Unsigned(16, "RAS size")

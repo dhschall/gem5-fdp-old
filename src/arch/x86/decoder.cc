@@ -1,4 +1,16 @@
 /*
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
+ *
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
+ *
  * Copyright (c) 2011 Google
  * All rights reserved.
  *
@@ -701,8 +713,11 @@ Decoder::decode(PCStateBase &next_pc)
     updateNPC(next_pc.as<PCState>());
 
     StaticInstPtr &si = instBytes->si;
-    if (si)
+    if (si) {
+        si->size(next_pc.as<PCState>().size());
         return si;
+    }
+
 
     // We didn't match in the AddrMap, but we still populated an entry. Fix
     // up its byte masks.
@@ -733,6 +748,7 @@ Decoder::decode(PCStateBase &next_pc)
     }
 
     si = decode(emi, origPC);
+    si->size(next_pc.as<PCState>().size());
     return si;
 }
 

@@ -1,4 +1,16 @@
 /*
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
+ *
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
+ *
  * Copyright 2019 Texas A&M University
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,7 +72,8 @@ class MPP_TAGE : public TAGEBase
   public:
     struct BranchInfo : public TAGEBase::BranchInfo
     {
-        BranchInfo(TAGEBase &tage) : TAGEBase::BranchInfo(tage)
+        BranchInfo(TAGEBase &tage, Addr pc, bool cond)
+        : TAGEBase::BranchInfo(tage, pc, cond)
         {}
         virtual ~BranchInfo()
         {}
@@ -82,11 +95,11 @@ class MPP_TAGE : public TAGEBase
 
     unsigned getUseAltIdx(TAGEBase::BranchInfo* bi, Addr branch_pc) override;
     void adjustAlloc(bool & alloc, bool taken, bool pred_taken) override;
-    void updateHistories(ThreadID tid, Addr branch_pc, bool taken,
-                         TAGEBase::BranchInfo* b, bool speculative,
-                         const StaticInstPtr &inst, Addr target) override;
+    void updateHistories(ThreadID tid, Addr branch_pc, bool speculative,
+                         bool taken, Addr target, TAGEBase::BranchInfo* bi,
+                         const StaticInstPtr & inst) override;
 
-    void updatePathAndGlobalHistory(ThreadHistory& tHist, int brtype,
+    void updatePathAndGlobalHistory(ThreadID tid, int brtype,
                                     bool taken, Addr branch_pc, Addr target);
 };
 
@@ -209,7 +222,7 @@ class MultiperspectivePerceptronTAGE : public MultiperspectivePerceptron
                           LoopPredictor &loopPredictor,
                           StatisticalCorrector &statisticalCorrector)
           : MPPBranchInfo(pc, pcshift, cond),
-            tageBranchInfo(tage.makeBranchInfo()),
+            tageBranchInfo(tage.makeBranchInfo(pc, cond)),
             lpBranchInfo(loopPredictor.makeBranchInfo()),
             scBranchInfo(statisticalCorrector.makeBranchInfo()),
             predictedTaken(false)
@@ -234,14 +247,18 @@ class MultiperspectivePerceptronTAGE : public MultiperspectivePerceptron
 
     void init() override;
 
-    bool lookup(ThreadID tid, Addr instPC, void * &bp_history) override;
+    bool lookup(ThreadID tid, Addr instPC, void * &bpHistory) override;
 
     void update(ThreadID tid, Addr instPC, bool taken,
-            void *bp_history, bool squashed,
+            void * &bpHistory, bool squashed,
             const StaticInstPtr & inst,
             Addr corrTarget) override;
-    void uncondBranch(ThreadID tid, Addr pc, void * &bp_history) override;
-    void squash(ThreadID tid, void *bp_history) override;
+    void updateHistories(ThreadID tid, Addr pc, bool uncond, bool taken,
+                         Addr target,  void * &bpHistory) override;
+    void squash(ThreadID tid, void * &bpHistory) override;
+    void branchPlaceholder(ThreadID tid, Addr pc,
+                                bool uncond, void * &bpHistory) override
+    { panic("Not implemented for this BP!\n"); }
 
 };
 

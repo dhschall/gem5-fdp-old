@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2011, 2014 ARM Limited
  * Copyright (c) 2022-2023 The University of Edinburgh
  * All rights reserved
  *
@@ -11,9 +10,6 @@
  * terms below provided that you ensure that this notice is replicated
  * unmodified and in its entirety in all distributions of the software,
  * modified or unmodified, in source code or in binary form.
- *
- * Copyright (c) 2004-2006 The Regents of The University of Michigan
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,15 +35,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __CPU_PRED_2BIT_LOCAL_PRED_HH__
-#define __CPU_PRED_2BIT_LOCAL_PRED_HH__
+/* @file
+ * A helper for branch type information
+ */
 
-#include <vector>
+#ifndef __CPU_PRED_BRANCH_TYPE_HH__
+#define __CPU_PRED_BRANCH_TYPE_HH__
 
-#include "base/sat_counter.hh"
-#include "base/types.hh"
-#include "cpu/pred/bpred_unit.hh"
-#include "params/LocalBP.hh"
+#include "cpu/static_inst.hh"
+#include "enums/BranchType.hh"
 
 namespace gem5
 {
@@ -55,63 +51,41 @@ namespace gem5
 namespace branch_prediction
 {
 
-/**
- * Implements a local predictor that uses the PC to index into a table of
- * counters.  Note that any time a pointer to the bpHistory is given, it
- * should be NULL using this predictor because it does not have any branch
- * predictor state that needs to be recorded or updated; the update can be
- * determined solely by the branch being taken or not taken.
- */
-class LocalBP : public BPredUnit
+typedef enums::BranchType BranchType;
+
+inline BranchType getBranchType(StaticInstPtr inst)
 {
-  public:
-    /**
-     * Default branch predictor constructor.
-     */
-    LocalBP(const LocalBPParams &params);
+    if (inst->isReturn()) {
+        return BranchType::Return;
+    }
 
-    // Overriding interface functions
-    bool lookup(ThreadID tid, Addr pc, void * &bpHistory) override;
+    if (inst->isCall()) {
+        return inst->isDirectCtrl()
+                    ? BranchType::CallDirect
+                    : BranchType::CallIndirect;
+    }
 
-    void updateHistories(ThreadID tid, Addr pc, bool uncond, bool taken,
-                         Addr target,  void * &bpHistory) override;
+    if (inst->isDirectCtrl()) {
+        return inst->isCondCtrl()
+                    ? BranchType::DirectCond
+                    : BranchType::DirectUncond;
+    }
 
-    void update(ThreadID tid, Addr pc, bool taken,
-                void * &bpHistory, bool squashed,
-                const StaticInstPtr &inst, Addr corrTarget) override;
+    if (inst->isIndirectCtrl()) {
+        return inst->isCondCtrl()
+                    ? BranchType::IndirectCond
+                    : BranchType::IndirectUncond;
+    }
+    return BranchType::NoBranch;
+}
 
-    void squash(ThreadID tid, void * &bpHistory) override
-    { assert(bpHistory == NULL); }
+inline std::string toString(BranchType type)
+{
+    return std::string(enums::BranchTypeStrings[type]);
+}
 
-  private:
-    /**
-     *  Returns the taken/not taken prediction given the value of the
-     *  counter.
-     *  @param count The value of the counter.
-     *  @return The prediction based on the counter value.
-     */
-    inline bool getPrediction(uint8_t &count);
-
-    /** Calculates the local index based on the PC. */
-    inline unsigned getLocalIndex(Addr &PC);
-
-    /** Size of the local predictor. */
-    const unsigned localPredictorSize;
-
-    /** Number of bits of the local predictor's counters. */
-    const unsigned localCtrBits;
-
-    /** Number of sets. */
-    const unsigned localPredictorSets;
-
-    /** Array of counters that make up the local predictor. */
-    std::vector<SatCounter8> localCtrs;
-
-    /** Mask to get index bits. */
-    const unsigned indexMask;
-};
 
 } // namespace branch_prediction
 } // namespace gem5
 
-#endif // __CPU_PRED_2BIT_LOCAL_PRED_HH__
+#endif // __CPU_PRED_BRANCH_TYPE_HH__

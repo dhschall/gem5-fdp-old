@@ -11,12 +11,7 @@
  * unmodified and in its entirety in all distributions of the software,
  * modified or unmodified, in source code or in binary form.
  *
- * Copyright (c) 2014 The University of Wisconsin
- *
- * Copyright (c) 2006 INRIA (Institut National de Recherche en
- * Informatique et en Automatique  / French National Research Institute
- * for Computer Science and Applied Mathematics)
- *
+ * Copyright (c) 2004-2005 The Regents of The University of Michigan
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,29 +38,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* @file
- * Implementation of a TAGE branch predictor. TAGE is a global-history based
- * branch predictor. It features a PC-indexed bimodal predictor and N
- * partially tagged tables, indexed with a hash of the PC and the global
- * branch history. The different lengths of global branch history used to
- * index the partially tagged tables grow geometrically. A small path history
- * is also used in the hash.
- *
- * All TAGE tables are accessed in parallel, and the one using the longest
- * history that matches provides the prediction (some exceptions apply).
- * Entries are allocated in components using a longer history than the
- * one that predicted when the prediction is incorrect.
- */
+#ifndef __CPU_PRED_SIMPLE_BTB_HH__
+#define __CPU_PRED_SIMPLE_BTB_HH__
 
-#ifndef __CPU_PRED_TAGE_HH__
-#define __CPU_PRED_TAGE_HH__
-
-#include <vector>
-
+#include "base/logging.hh"
 #include "base/types.hh"
-#include "cpu/pred/bpred_unit.hh"
-#include "cpu/pred/tage_base.hh"
-#include "params/TAGE.hh"
+#include "cpu/pred/btb.hh"
+#include "params/SimpleBTB.hh"
 
 namespace gem5
 {
@@ -73,45 +52,76 @@ namespace gem5
 namespace branch_prediction
 {
 
-class TAGE: public BPredUnit
+class SimpleBTB : public BranchTargetBuffer
 {
-  protected:
-    TAGEBase *tage;
+  public:
+    SimpleBTB(const SimpleBTBParams &params);
 
-    struct TageBranchInfo
+    void memInvalidate() override;
+    const PCStateBase *lookup(ThreadID tid, Addr instPC,
+                           BranchType type = BranchType::NoBranch) override;
+    bool valid(ThreadID tid, Addr instPC,
+                           BranchType type = BranchType::NoBranch) override;
+    void update(ThreadID tid, Addr instPC, const PCStateBase &target_pc,
+                           BranchType type = BranchType::NoBranch,
+                           StaticInstPtr inst = nullptr) override;
+
+
+  private:
+    struct BTBEntry
     {
-        TAGEBase::BranchInfo *tageBranchInfo;
+        /** The entry's tag. */
+        Addr tag = 0;
 
-        TageBranchInfo(TAGEBase &tage, Addr pc, bool conditional)
-        : tageBranchInfo(tage.makeBranchInfo(pc, conditional))
-        {}
+        /** The entry's target. */
+        std::unique_ptr<PCStateBase> target;
 
-        virtual ~TageBranchInfo()
-        {
-            delete tageBranchInfo;
-        }
+        /** The entry's thread id. */
+        ThreadID tid;
+
+        /** Whether or not the entry is valid. */
+        bool valid = false;
     };
 
-    virtual bool predict(ThreadID tid, Addr branch_pc, bool cond_branch,
-                         void* &b);
 
-  public:
+    /** Returns the index into the BTB, based on the branch's PC.
+     *  @param inst_PC The branch to look up.
+     *  @return Returns the index into the BTB.
+     */
+    inline unsigned getIndex(Addr instPC, ThreadID tid);
 
-    TAGE(const TAGEParams &params);
+    /** Returns the tag bits of a given address.
+     *  @param inst_PC The branch's address.
+     *  @return Returns the tag bits.
+     */
+    inline Addr getTag(Addr instPC);
 
-    // Base class methods.
-    bool lookup(ThreadID tid, Addr branch_addr, void* &bpHistory) override;
-    void updateHistories(ThreadID tid, Addr pc, bool uncond, bool taken,
-                         Addr target,  void * &bpHistory) override;
-    void update(ThreadID tid, Addr branch_addr, bool taken, void * &bpHistory,
-                bool squashed, const StaticInstPtr & inst,
-                Addr corrTarget) override;
-    virtual void squash(ThreadID tid, void * &bpHistory) override;
-    virtual void branchPlaceholder(ThreadID tid, Addr pc,
-                                   bool uncond, void * &bpHistory) override;
+    /** The actual BTB. */
+    std::vector<BTBEntry> btb;
+
+    /** The number of entries in the BTB. */
+    unsigned numEntries;
+
+    /** The index mask. */
+    unsigned idxMask;
+
+    /** The number of tag bits per entry. */
+    unsigned tagBits;
+
+    /** The tag mask. */
+    unsigned tagMask;
+
+    /** Number of bits to shift PC when calculating index. */
+    unsigned instShiftAmt;
+
+    /** Number of bits to shift PC when calculating tag. */
+    unsigned tagShiftAmt;
+
+    /** Log2 NumThreads used for hashing threadid */
+    unsigned log2NumThreads;
 };
 
 } // namespace branch_prediction
 } // namespace gem5
 
-#endif // __CPU_PRED_TAGE_HH__
+#endif // __CPU_PRED_SIMPLE_BTB_HH__

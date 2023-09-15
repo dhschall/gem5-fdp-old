@@ -1,4 +1,16 @@
 /*
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
+ *
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
+ *
  * Copyright (c) 2014 The University of Wisconsin
  *
  * Copyright (c) 2006 INRIA (Institut National de Recherche en
@@ -61,11 +73,21 @@ LTAGE::init()
     TAGE::init();
 }
 
+void
+LTAGE::branchPlaceholder(ThreadID tid, Addr pc,
+                         bool uncond, void * &bpHistory)
+{
+    LTageBranchInfo *bi = new LTageBranchInfo(*tage, *loopPredictor,
+                                              pc, !uncond);
+    bpHistory = (void*)(bi);
+}
+
 //prediction
 bool
 LTAGE::predict(ThreadID tid, Addr branch_pc, bool cond_branch, void* &b)
 {
-    LTageBranchInfo *bi = new LTageBranchInfo(*tage, *loopPredictor);
+    LTageBranchInfo *bi = new LTageBranchInfo(*tage, *loopPredictor,
+                                              branch_pc, cond_branch);
     b = (void*)(bi);
 
     bool pred_taken = tage->tagePredict(tid, branch_pc, cond_branch,
@@ -94,12 +116,12 @@ LTAGE::predict(ThreadID tid, Addr branch_pc, bool cond_branch, void* &b)
 
 // PREDICTOR UPDATE
 void
-LTAGE::update(ThreadID tid, Addr branch_pc, bool taken, void* bp_history,
+LTAGE::update(ThreadID tid, Addr branch_pc, bool taken, void* &bpHistory,
               bool squashed, const StaticInstPtr & inst, Addr corrTarget)
 {
-    assert(bp_history);
+    assert(bpHistory);
 
-    LTageBranchInfo* bi = static_cast<LTageBranchInfo*>(bp_history);
+    LTageBranchInfo* bi = static_cast<LTageBranchInfo*>(bpHistory);
 
     if (squashed) {
         if (tage->isSpeculativeUpdateEnabled()) {
@@ -129,22 +151,22 @@ LTAGE::update(ThreadID tid, Addr branch_pc, bool taken, void* bp_history,
             nrand, corrTarget, bi->lpBranchInfo->predTaken);
     }
 
-    tage->updateHistories(tid, branch_pc, taken, bi->tageBranchInfo, false,
-                          inst, corrTarget);
+    tage->updateHistories(tid, branch_pc, false, taken, corrTarget,
+                          bi->tageBranchInfo, inst);
 
-    delete bi;
+    delete bi; bpHistory = nullptr;
 }
 
 void
-LTAGE::squash(ThreadID tid, void *bp_history)
+LTAGE::squash(ThreadID tid, void * &bpHistory)
 {
-    LTageBranchInfo* bi = (LTageBranchInfo*)(bp_history);
+    LTageBranchInfo* bi = (LTageBranchInfo*)(bpHistory);
 
     if (bi->tageBranchInfo->condBranch) {
         loopPredictor->squash(tid, bi->lpBranchInfo);
     }
 
-    TAGE::squash(tid, bp_history);
+    TAGE::squash(tid, bpHistory);
 }
 
 } // namespace branch_prediction

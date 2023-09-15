@@ -1,4 +1,16 @@
 /*
+ * Copyright (c) 2022-2023 The University of Edinburgh
+ * All rights reserved
+ *
+ * The license below extends only to copyright in the software and shall
+ * not be construed as granting a license to any other intellectual
+ * property including but not limited to intellectual property relating
+ * to a hardware implementation of the functionality of the software
+ * licensed hereunder.  You may use the software subject to the license
+ * terms below provided that you ensure that this notice is replicated
+ * unmodified and in its entirety in all distributions of the software,
+ * modified or unmodified, in source code or in binary form.
+ *
  * Copyright (c) 2018 Metempsy Technology Consulting
  * All rights reserved.
  *
@@ -70,9 +82,9 @@ TAGE_SC_L::TAGE_SC_L(const TAGE_SC_LParams &p)
 }
 
 TAGEBase::BranchInfo*
-TAGE_SC_L_TAGE::makeBranchInfo()
+TAGE_SC_L_TAGE::makeBranchInfo(Addr pc, bool cond)
 {
-    return new BranchInfo(*this);
+    return new BranchInfo(*this, pc, cond);
 }
 void
 TAGE_SC_L_TAGE::calculateParameters()
@@ -228,8 +240,9 @@ TAGE_SC_L_TAGE::bindex(Addr pc) const
 
 void
 TAGE_SC_L_TAGE::updatePathAndGlobalHistory(
-    ThreadHistory& tHist, int brtype, bool taken, Addr branch_pc, Addr target)
+    ThreadID tid, int brtype, bool taken, Addr branch_pc, Addr target)
 {
+    ThreadHistory& tHist = threadHistory[tid];
     // TAGE update
     int tmp = ((branch_pc ^ (branch_pc >> instShiftAmt))) ^ taken;
     int path = branch_pc ^ (branch_pc >> instShiftAmt)
@@ -243,28 +256,23 @@ TAGE_SC_L_TAGE::updatePathAndGlobalHistory(
     int maxt = (brtype == 2) ? 3 : 2;
 
     for (int t = 0; t < maxt; t++) {
-        bool dir = (tmp & 1);
-        tmp >>= 1;
         int pathbit = (path & 127);
         path >>= 1;
-        updateGHist(tHist.gHist, dir, tHist.globalHistory, tHist.ptGhist);
         tHist.pathHist = (tHist.pathHist << 1) ^ pathbit;
         if (truncatePathHist) {
             // The 8KB implementation does not do this truncation
             tHist.pathHist = (tHist.pathHist & ((1ULL << pathHistBits) - 1));
         }
-        for (int i = 1; i <= nHistoryTables; i++) {
-            tHist.computeIndices[i].update(tHist.gHist);
-            tHist.computeTags[0][i].update(tHist.gHist);
-            tHist.computeTags[1][i].update(tHist.gHist);
-        }
     }
+
+    updateGHist(tid, tmp, maxt);
 }
 
 void
-TAGE_SC_L_TAGE::updateHistories(
-    ThreadID tid, Addr branch_pc, bool taken, TAGEBase::BranchInfo* b,
-    bool speculative, const StaticInstPtr &inst, Addr target)
+TAGE_SC_L_TAGE::updateHistories(ThreadID tid, Addr branch_pc,
+                                bool speculative, bool taken,
+                                Addr target, TAGEBase::BranchInfo* bi,
+                                const StaticInstPtr & inst)
 {
     if (speculative != speculativeHistUpdate) {
         return;
@@ -278,7 +286,7 @@ TAGE_SC_L_TAGE::updateHistories(
     if (! inst->isUncondCtrl()) {
         ++brtype;
     }
-    updatePathAndGlobalHistory(tHist, brtype, taken, branch_pc, target);
+    updatePathAndGlobalHistory(tid, brtype, taken, branch_pc, target);
 
     DPRINTF(TageSCL, "Updating global histories with branch:%lx; taken?:%d, "
             "path Hist: %x; pointer:%d\n", branch_pc, taken, tHist.pathHist,
@@ -366,7 +374,8 @@ TAGE_SC_L::predict(ThreadID tid, Addr branch_pc, bool cond_branch, void* &b)
 {
     TageSCLBranchInfo *bi = new TageSCLBranchInfo(*tage,
                                                   *statisticalCorrector,
-                                                  *loopPredictor);
+                                                  *loopPredictor,
+                                                  branch_pc, cond_branch);
     b = (void*)(bi);
 
     bool pred_taken = tage->tagePredict(tid, branch_pc, cond_branch,
@@ -410,12 +419,12 @@ TAGE_SC_L::predict(ThreadID tid, Addr branch_pc, bool cond_branch, void* &b)
 }
 
 void
-TAGE_SC_L::update(ThreadID tid, Addr branch_pc, bool taken, void *bp_history,
+TAGE_SC_L::update(ThreadID tid, Addr branch_pc, bool taken, void * &bpHistory,
         bool squashed, const StaticInstPtr & inst, Addr corrTarget)
 {
-    assert(bp_history);
+    assert(bpHistory);
 
-    TageSCLBranchInfo* bi = static_cast<TageSCLBranchInfo*>(bp_history);
+    TageSCLBranchInfo* bi = static_cast<TageSCLBranchInfo*>(bpHistory);
     TAGE_SC_L_TAGE::BranchInfo* tage_bi =
         static_cast<TAGE_SC_L_TAGE::BranchInfo *>(bi->tageBranchInfo);
 
@@ -458,11 +467,11 @@ TAGE_SC_L::update(ThreadID tid, Addr branch_pc, bool taken, void *bp_history,
         statisticalCorrector->scHistoryUpdate(branch_pc, inst, taken,
                                               bi->scBranchInfo, corrTarget);
 
-        tage->updateHistories(tid, branch_pc, taken, bi->tageBranchInfo, false,
-                              inst, corrTarget);
+        tage->updateHistories(tid, branch_pc, false, taken, corrTarget,
+                              bi->tageBranchInfo, inst);
     }
 
-    delete bi;
+    delete bi; bpHistory = nullptr;
 }
 
 } // namespace branch_prediction
